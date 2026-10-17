@@ -1,0 +1,696 @@
+// ============================================================
+// AUS Prep — Unified exam-prep e-learning platform
+// Backbone: aus-bcs (Supabase-native, normalized).
+// Folded in: alokbortika written module + model answers,
+//            fresh Bunny Stream video course module.
+//
+// Conventions:
+//  - User.id mirrors Supabase auth.users.id (uuid).
+//  - User-facing text has *Bn (Bengali) and *En (English) columns.
+//  - Money is Decimal in BDT.
+//  - Image/file columns store Supabase Storage object paths
+//    (private buckets); signed URLs are minted in the service layer.
+//  - Video is hosted on Bunny Stream; Lesson keeps the Bunny video id
+//    and playback host, never the raw bytes.
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL") // pooled (pgBouncer, port 6543)
+  directUrl = env("DIRECT_URL") // direct (port 5432) for migrations
+}
+
+// ---------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------
+
+enum Role {
+  ADMIN
+  MODERATOR // collaborator with per-menu permissions (User.permissions)
+  STUDENT
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum QuestionStatus {
+  ACTIVE
+  DRAFT
+  ARCHIVED
+}
+
+enum ExamType {
+  PRACTICE
+  LIVE
+}
+
+enum ExamStatus {
+  DRAFT // being built by admin, not visible
+  PUBLISHED // practice: takeable now; live: scheduled, visible with countdown
+  ONGOING // live only: window open (set by sweep)
+  COMPLETED // live only: window closed, results published
+  ARCHIVED
+}
+
+enum AttemptStatus {
+  IN_PROGRESS
+  SUBMITTED // student pressed submit
+  AUTO_SUBMITTED // server submitted at timeout / window end
+}
+
+enum ImportStatus {
+  PENDING // uploaded + validated, awaiting confirm
+  COMMITTED
+  DISCARDED
+}
+
+enum LessonType {
+  VIDEO // Bunny Stream recorded lesson
+  PDF
+  LIVE_CLASS // live class link (Zoom/Meet)
+  QUIZ
+  RESOURCE // generic resource link
+  EXAM // links to an Exam (course exam)
+}
+
+// Course track — chosen when the course is created.
+enum CourseType {
+  PRELIMINARY
+  WRITTEN
+  EXAM
+  GENERAL
+}
+
+// Manual mobile-banking payment approval flow.
+enum PaymentMethod {
+  BKASH
+  NAGAD
+  ROCKET
+  UPAY
+  OTHER
+}
+
+enum PaymentRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// Bunny direct-upload lifecycle of a lesson video
+enum VideoStatus {
+  NONE // no video yet (non-video lesson, or not uploaded)
+  CREATED // Bunny video object created, awaiting browser upload
+  UPLOADING
+  PROCESSING // Bunny transcoding
+  READY // playable
+  FAILED
+}
+
+enum WrittenEvaluationStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  EVALUATED
+}
+
+enum NotificationType {
+  ANNOUNCEMENT
+  EXAM_REMINDER
+  RESULT_PUBLISHED
+  SYSTEM
+}
+
+// ---------------------------------------------------------------
+// 1. Auth & Users
+// ---------------------------------------------------------------
+
+model User {
+  id          String   @id @db.Uuid // = Supabase auth.users.id
+  email       String   @unique
+  name        String
+  nameBn      String?
+  photoPath   String? // Supabase Storage path (private bucket "avatars")
+  phone       String?
+  role        Role     @default(STUDENT)
+  // MODERATOR permission keys (match admin nav): dashboard, taxonomy,
+  // questions, exams, written, courses, users, settings. ADMIN = all.
+  permissions String[] @default([])
+  targetExam  String? // free text, e.g. "47th BCS"
+
+  isBanned  Boolean   @default(false)
+  bannedAt  DateTime?
+  banReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  attempts         Attempt[]
+  createdQuestions Question[]    @relation("QuestionCreatedBy")
+  createdExams     Exam[]        @relation("ExamCreatedBy")
+  importBatches    ImportBatch[]
+
+  enrollments        Enrollment[]
+  writtenAttempts    WrittenAttempt[]
+  writtenEvaluations WrittenAttempt[] @relation("WrittenEvaluatedBy")
+  bookmarks          Bookmark[]
+  notifications      Notification[]
+  lessonProgress     LessonProgress[]
+  paymentRequests    PaymentRequest[]
+  reviewedPayments   PaymentRequest[] @relation("PaymentReviewedBy")
+
+  @@index([role])
+  @@index([isBanned])
+}
+
+// ---------------------------------------------------------------
+// 2. Taxonomy: JobCategory → Subject → Topic
+// ---------------------------------------------------------------
+
+model JobCategory {
+  id       String  @id @default(cuid())
+  slug     String  @unique // "bcs"
+  nameEn   String
+  nameBn   String
+  icon     String  @default("📝")
+  order    Int     @default(0)
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subjects     Subject[]
+  exams        Exam[]
+  courses      Course[]
+  writtenExams WrittenExam[]
+}
+
+model Subject {
+  id         String  @id @default(cuid())
+  categoryId String
+  slug       String
+  nameEn     String
+  nameBn     String
+  order      Int     @default(0)
+  isActive   Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  category  JobCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  topics    Topic[]
+  questions Question[]
+
+  @@unique([categoryId, slug])
+  @@index([categoryId])
+}
+
+model Topic {
+  id        String  @id @default(cuid())
+  subjectId String
+  parentId  String? // null = top-level; set = sub-topic (any depth)
+  slug      String
+  nameEn    String
+  nameBn    String
+  order     Int     @default(0)
+  isActive  Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subject   Subject    @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  parent    Topic?     @relation("SubTopics", fields: [parentId], references: [id], onDelete: Cascade)
+  children  Topic[]    @relation("SubTopics")
+  questions Question[]
+
+  @@unique([subjectId, slug])
+  @@index([subjectId])
+  @@index([parentId])
+}
+
+// ---------------------------------------------------------------
+// 3. Question Bank (normalized options)
+// ---------------------------------------------------------------
+
+model Question {
+  id        String  @id @default(cuid())
+  subjectId String
+  topicId   String?
+
+  textBn    String
+  textEn    String?
+  imagePath String? // Storage path, bucket "question-images"
+
+  explanationBn String?
+  explanationEn String?
+
+  difficulty Difficulty     @default(MEDIUM)
+  source     String? // e.g. "35th BCS"
+  year       Int?
+  status     QuestionStatus @default(ACTIVE)
+
+  // normalized hash of (textBn + option texts) for duplicate detection
+  contentHash String @unique
+
+  createdById   String? @db.Uuid
+  importBatchId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subject       Subject          @relation(fields: [subjectId], references: [id])
+  topic         Topic?           @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  createdBy     User?            @relation("QuestionCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  importBatch   ImportBatch?     @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
+  options       QuestionOption[]
+  examQuestions ExamQuestion[]
+  answers       AttemptAnswer[]
+  bookmarks     Bookmark[]
+
+  @@index([subjectId, topicId])
+  @@index([difficulty])
+  @@index([status])
+}
+
+model QuestionOption {
+  id         String  @id @default(cuid())
+  questionId String
+  order      Int // 0..n (canonical; shuffle happens per-attempt)
+  textBn     String
+  textEn     String?
+  imagePath  String?
+  isCorrect  Boolean @default(false) // NEVER serialized to client pre-submission
+
+  question Question        @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  answers  AttemptAnswer[]
+
+  @@unique([questionId, order])
+  @@index([questionId])
+}
+
+model ImportBatch {
+  id            String       @id @default(cuid())
+  fileName      String
+  format        String // "csv" | "xlsx" | "paste"
+  status        ImportStatus @default(PENDING)
+  totalRows     Int          @default(0)
+  validRows     Int          @default(0)
+  errorRows     Int          @default(0)
+  duplicateRows Int          @default(0)
+  errorReport   Json? // [{ row, field, message }]
+  payload       Json? // validated rows held between preview & commit
+  createdById   String       @db.Uuid
+
+  createdAt   DateTime  @default(now())
+  committedAt DateTime?
+
+  createdBy User       @relation(fields: [createdById], references: [id])
+  questions Question[]
+
+  @@index([createdById, status])
+}
+
+// ---------------------------------------------------------------
+// 4. Exam Engine (MCQ)
+// ---------------------------------------------------------------
+
+model Exam {
+  id         String     @id @default(cuid())
+  type       ExamType
+  status     ExamStatus @default(DRAFT)
+  categoryId String?
+
+  titleEn       String
+  titleBn       String?
+  descriptionEn String?
+  descriptionBn String?
+
+  durationMinutes  Int
+  totalMarks       Decimal @db.Decimal(8, 2) // denormalized sum of ExamQuestion.marks
+  passMark         Decimal @db.Decimal(8, 2)
+  negativeMarking  Decimal @default(0.25) @db.Decimal(4, 2)
+  shuffleQuestions Boolean @default(true)
+  shuffleOptions   Boolean @default(true)
+
+  // live-exam window (null for practice)
+  startAt            DateTime?
+  endAt              DateTime?
+  resultPublishedAt  DateTime?
+  autoPublishResults Boolean   @default(true)
+  instantResult      Boolean   @default(false)
+  isPersonal         Boolean   @default(false)
+
+  createdById String? @db.Uuid
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  category  JobCategory?   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  createdBy User?          @relation("ExamCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  questions ExamQuestion[]
+  attempts  Attempt[]
+
+  courseId String?
+  course   Course?  @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  lessons  Lesson[]
+
+  @@index([type, status])
+  @@index([status, startAt])
+  @@index([categoryId])
+  @@index([courseId])
+  @@index([type, status, endAt])
+}
+
+model ExamQuestion {
+  id         String  @id @default(cuid())
+  examId     String
+  questionId String
+  order      Int
+  marks      Decimal @default(1) @db.Decimal(6, 2)
+
+  exam     Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id])
+
+  @@unique([examId, questionId])
+  @@unique([examId, order])
+}
+
+model Attempt {
+  id        String        @id @default(cuid())
+  examId    String
+  userId    String        @db.Uuid
+  examType  ExamType // denormalized; backs partial unique index for one LIVE attempt
+  attemptNo Int           @default(1)
+  status    AttemptStatus @default(IN_PROGRESS)
+
+  // per-attempt shuffle orders, frozen at start
+  questionOrder Json
+  optionOrders  Json
+
+  startedAt   DateTime  @default(now())
+  deadlineAt  DateTime
+  submittedAt DateTime?
+
+  // scoring (server-side at submission)
+  score            Decimal? @db.Decimal(8, 2)
+  correctCount     Int?
+  wrongCount       Int?
+  skippedCount     Int?
+  negativeMarks    Decimal? @db.Decimal(8, 2)
+  timeTakenSeconds Int?
+  rank             Int?
+  subjectBreakdown Json?
+
+  tabSwitchCount Int     @default(0)
+  isArchive      Boolean @default(false)
+
+  user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exam    Exam            @relation(fields: [examId], references: [id], onDelete: Cascade)
+  answers AttemptAnswer[]
+
+  @@unique([examId, userId, attemptNo])
+  @@index([userId, status])
+  @@index([examId, status, score])
+  @@index([examId, userId, isArchive])
+}
+
+model AttemptAnswer {
+  id               String  @id @default(cuid())
+  attemptId        String
+  questionId       String
+  selectedOptionId String? // null = skipped
+  markedForReview  Boolean @default(false)
+
+  isCorrect Boolean? // filled at scoring time (server-side only)
+
+  answeredAt DateTime @updatedAt
+
+  attempt        Attempt         @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question       Question        @relation(fields: [questionId], references: [id])
+  selectedOption QuestionOption? @relation(fields: [selectedOptionId], references: [id])
+
+  @@unique([attemptId, questionId])
+  @@index([questionId, isCorrect])
+}
+
+// ---------------------------------------------------------------
+// 5. Written exams (long-form, model answers, evaluator workflow)
+// ---------------------------------------------------------------
+
+model WrittenExam {
+  id              String     @id @default(cuid())
+  categoryId      String?
+  titleEn         String
+  titleBn         String?
+  descriptionBn   String?
+  durationMinutes Int
+  // extra window after the exam ends for students to upload answer-sheet PDFs
+  uploadWindowMinutes Int    @default(10)
+  totalMarks      Decimal    @db.Decimal(8, 2)
+  startAt         DateTime?
+  endAt           DateTime?
+  status          ExamStatus @default(DRAFT)
+  // show the model answers to students immediately after they submit
+  showModelAnswer Boolean    @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  category  JobCategory?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  questions WrittenQuestion[]
+  attempts  WrittenAttempt[]
+}
+
+model WrittenQuestion {
+  id            String  @id @default(cuid())
+  writtenExamId String
+  order         Int
+  promptBn      String
+  promptEn      String?
+  // model answer shown to students (Alokbortika-style) after submission
+  modelAnswerBn String?
+  modelAnswerEn String?
+  marks         Decimal @db.Decimal(6, 2)
+
+  writtenExam WrittenExam     @relation(fields: [writtenExamId], references: [id], onDelete: Cascade)
+  answers     WrittenAnswer[]
+
+  @@unique([writtenExamId, order])
+}
+
+model WrittenAttempt {
+  id            String                  @id @default(cuid())
+  writtenExamId String
+  userId        String                  @db.Uuid
+  status        WrittenEvaluationStatus @default(SUBMITTED)
+
+  submittedAt   DateTime  @default(now())
+  evaluatedById String?   @db.Uuid
+  evaluatedAt   DateTime?
+  totalAwarded  Decimal?  @db.Decimal(8, 2)
+  feedback      String?
+
+  writtenExam WrittenExam     @relation(fields: [writtenExamId], references: [id], onDelete: Cascade)
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  evaluatedBy User?           @relation("WrittenEvaluatedBy", fields: [evaluatedById], references: [id], onDelete: SetNull)
+  answers     WrittenAnswer[]
+
+  @@unique([writtenExamId, userId])
+  @@index([status])
+}
+
+model WrittenAnswer {
+  id                String   @id @default(cuid())
+  writtenAttemptId  String
+  writtenQuestionId String
+  answerText        String? // legacy typed answer (optional)
+  fileUrl           String? // student's uploaded answer-sheet PDF (public files bucket)
+  marksAwarded      Decimal? @db.Decimal(6, 2)
+  evaluatorNote     String?
+  voiceUrl          String? // evaluator's recorded voice feedback
+  annotatedFileUrl  String? // evaluator's annotated PDF (drawn on the answer sheet)
+
+  writtenAttempt  WrittenAttempt  @relation(fields: [writtenAttemptId], references: [id], onDelete: Cascade)
+  writtenQuestion WrittenQuestion @relation(fields: [writtenQuestionId], references: [id], onDelete: Cascade)
+
+  @@unique([writtenAttemptId, writtenQuestionId])
+}
+
+// ---------------------------------------------------------------
+// 6. Video courses (Bunny Stream)
+// ---------------------------------------------------------------
+
+model Course {
+  id            String     @id @default(cuid())
+  categoryId    String?
+  courseType    CourseType @default(GENERAL)
+  slug          String     @unique
+  titleEn       String
+  titleBn       String?
+  descriptionEn String?
+  descriptionBn String?
+  thumbnailPath String? // Storage path (public marketing image)
+  priceBDT      Decimal    @default(0) @db.Decimal(10, 2)
+  isFree        Boolean    @default(false)
+  isPublished   Boolean    @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  category        JobCategory?     @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  sections        CourseSection[]
+  enrollments     Enrollment[]
+  exams           Exam[]
+  paymentRequests PaymentRequest[]
+}
+
+// A student's manual payment submission awaiting admin approval. On approval
+// the service creates an Enrollment for the course.
+model PaymentRequest {
+  id           String               @id @default(cuid())
+  userId       String               @db.Uuid
+  courseId     String
+  method       PaymentMethod
+  senderNumber String? // the mobile number the payment was sent from
+  trxLast4     String // last 4 digits of the transaction id (or reference)
+  trxId        String? // optional full transaction id
+  amount       Decimal              @db.Decimal(10, 2)
+  status       PaymentRequestStatus @default(PENDING)
+  adminNote    String?
+
+  reviewedById String?   @db.Uuid
+  reviewedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course     Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  reviewedBy User?   @relation("PaymentReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([userId])
+  @@index([courseId, status])
+}
+
+model CourseSection {
+  id       String  @id @default(cuid())
+  courseId String
+  titleEn  String
+  titleBn  String?
+  order    Int     @default(0)
+
+  course  Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons Lesson[]
+
+  @@index([courseId])
+}
+
+model Lesson {
+  id        String     @id @default(cuid())
+  sectionId String
+  type      LessonType @default(VIDEO)
+  titleEn   String
+  titleBn   String?
+  order     Int        @default(0)
+
+  // Bunny Stream video (direct browser → Bunny upload; bytes skip our server)
+  bunnyVideoId    String? // GUID of the Bunny video object
+  videoStatus     VideoStatus @default(NONE)
+  durationSeconds Int?
+
+  // non-video lesson payloads
+  linkUrl         String? // RESOURCE / LIVE_CLASS join link
+  examId          String? // EXAM lessons point at an Exam
+  liveScheduledAt DateTime?
+  filePath        String? // PDF: Storage path
+
+  isFreePreview Boolean @default(false)
+  isPublished   Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  section  CourseSection    @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  exam     Exam?            @relation(fields: [examId], references: [id], onDelete: SetNull)
+  progress LessonProgress[]
+
+  @@index([sectionId])
+  @@index([examId])
+}
+
+model LessonProgress {
+  id       String @id @default(cuid())
+  userId   String @db.Uuid
+  lessonId String
+
+  completed           Boolean @default(false)
+  lastPositionSeconds Int     @default(0)
+
+  updatedAt DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@index([userId])
+}
+
+model Enrollment {
+  id       String @id @default(cuid())
+  userId   String @db.Uuid
+  courseId String
+
+  enrolledAt DateTime  @default(now())
+  expiresAt  DateTime?
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@index([courseId])
+}
+
+// ---------------------------------------------------------------
+// 7. CMS, bookmarks, notifications
+// ---------------------------------------------------------------
+
+model SiteSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+model Bookmark {
+  id         String   @id @default(cuid())
+  userId     String   @db.Uuid
+  questionId String
+  createdAt  DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, questionId])
+  @@index([userId])
+}
+
+model Notification {
+  id     String           @id @default(cuid())
+  userId String           @db.Uuid
+  type   NotificationType @default(SYSTEM)
+  title  String
+  body   String?
+  link   String?
+  isRead Boolean          @default(false)
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+}

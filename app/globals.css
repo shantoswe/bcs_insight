@@ -1,0 +1,118 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* ============================================================
+   AUS Prep — light, vibrant education theme (NOT dark mode)
+   Primary: vivid indigo/violet · Secondary: warm coral
+   Accent: emerald · Background: soft near-white tint
+   All pairings target WCAG AA contrast.
+   ============================================================ */
+
+:root {
+  --radius: 0.85rem;
+
+  --background: oklch(0.99 0.006 285);      /* soft near-white violet tint */
+  --foreground: oklch(0.22 0.03 285);       /* deep slate-violet ink */
+
+  --card: oklch(1 0 0);
+  --card-foreground: var(--foreground);
+  --popover: oklch(1 0 0);
+  --popover-foreground: var(--foreground);
+
+  --primary: oklch(0.52 0.24 292);          /* vivid indigo/violet */
+  --primary-foreground: oklch(0.99 0.01 285);
+
+  --secondary: oklch(0.7 0.18 18);          /* warm coral */
+  --secondary-foreground: oklch(0.99 0.01 20);
+
+  --accent: oklch(0.72 0.17 162);           /* emerald */
+  --accent-foreground: oklch(0.2 0.05 162);
+
+  --muted: oklch(0.96 0.01 285);
+  --muted-foreground: oklch(0.5 0.03 285);
+
+  --destructive: oklch(0.58 0.23 27);
+  --destructive-foreground: oklch(0.99 0.01 20);
+
+  --success: oklch(0.65 0.17 150);
+  --warning: oklch(0.78 0.16 75);
+
+  --border: oklch(0.92 0.01 285);
+  --input: oklch(0.92 0.01 285);
+  --ring: oklch(0.52 0.24 292);
+
+  --chart-1: oklch(0.52 0.24 292);
+  --chart-2: oklch(0.7 0.18 18);
+  --chart-3: oklch(0.72 0.17 162);
+  --chart-4: oklch(0.78 0.16 75);
+  --chart-5: oklch(0.6 0.2 250);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --font-sans: var(--font-hind), ui-sans-serif, system-ui, sans-serif;
+}
+
+* {
+  border-color: var(--border);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
+}
+
+/* subtle brand gradient used on hero/landing surfaces */
+.brand-gradient {
+  background: linear-gradient(135deg, oklch(0.52 0.24 292) 0%, oklch(0.6 0.2 250) 45%, oklch(0.7 0.18 18) 100%);
+}
+.brand-gradient-soft {
+  background: linear-gradient(135deg, oklch(0.97 0.03 292) 0%, oklch(0.98 0.02 250) 50%, oklch(0.98 0.03 18) 100%);
+}
+.text-gradient {
+  background: linear-gradient(120deg, var(--primary), var(--secondary));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* thin card shadow used everywhere */
+.soft-shadow {
+  box-shadow: 0 1px 2px oklch(0.5 0.1 285 / 0.06), 0 8px 24px -12px oklch(0.5 0.1 285 / 0.18);
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }

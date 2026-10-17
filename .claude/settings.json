@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -la && echo \"=== SIBLINGS ===\" && ls -la ..)",
+      "Read(//Users/shanto/Desktop/**)",
+      "Bash(echo \"===== alokbortika/app =====\"; find alokbortika/app -maxdepth 2 -type d | sort; echo; echo \"===== alok api =====\"; find alokbortika/app/api -maxdepth 2 -type d | sort; echo; echo \"===== alok components =====\"; find alokbortika/components -maxdepth 2 -type d | sort; echo \"===== shikho / bunny search =====\"; ls .. | grep -i shikho; grep -ril bunny aus-bcs alokbortika 2>/dev/null | head; echo \"\\(bunny grep done\\)\")",
+      "Bash(npm install *)",
+      "Bash(npx prisma *)"
+    ]
+  }
+}
