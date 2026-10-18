@@ -19,7 +19,7 @@ export default async function DashboardPage() {
     { icon: ClipboardList, label: "পরীক্ষা দিয়েছেন", value: data.examsTaken, tone: "bg-primary/12 text-primary" },
     { icon: TrendingUp, label: "গড় স্কোর", value: `${data.avgPercent}%`, tone: "bg-accent/15 text-accent-foreground" },
     { icon: PlayCircle, label: "কোর্স", value: data.enrollments, tone: "bg-secondary/15 text-secondary" },
-    { icon: Bookmark, label: "ভুল খাতা", value: data.bookmarks, tone: "bg-[oklch(0.78_0.16_75_/_0.2)] text-[oklch(0.45_0.12_70)]" },
+    { icon: Bookmark, label: "ভুল খাতা", value: data.bookmarks, tone: "bg-warning/12 text-warning" },
   ];
 
   const quick = [

@@ -1,4 +1,4 @@
-# /etc/nginx/sites-available/aus-prep
+# /etc/nginx/sites-available/bcs-insight
 # Reverse proxy Nginx → Next.js (PM2) on 127.0.0.1:3000.
 # After `certbot --nginx` the TLS block below is added for you automatically.
 

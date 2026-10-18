@@ -4,7 +4,7 @@
 module.exports = {
   apps: [
     {
-      name: "aus-prep",
+      name: "bcs-insight",
       // `npm start` runs `next start` (see package.json)
       script: "npm",
       args: "start",
@@ -23,7 +23,7 @@ module.exports = {
     // The app also sweeps opportunistically on traffic, so this only matters
     // during idle periods. Requires CRON_SECRET in the environment.
     {
-      name: "aus-prep-cron",
+      name: "bcs-insight-cron",
       script: "node",
       args: "scripts/cron-tick.js",
       cwd: __dirname,

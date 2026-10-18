@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { Loader2, CheckCircle2 } from "lucide-react";
+import { Loader2, CheckCircle2, Upload, FileText } from "lucide-react";
 import { post, patch } from "@/lib/client-api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { DialogFooter } from "@/components/ui/dialog";
 import { BunnyUpload } from "@/components/admin/bunny-upload";
+import { uploadDirectWithProgress } from "@/lib/upload-progress";
 
 const TYPES = [
   ["VIDEO", "ভিডিও (Bunny)"],
@@ -87,18 +88,72 @@ export function LessonForm({ sectionId, initial, onSaved }) {
       {(type === "RESOURCE" || type === "LIVE_CLASS") && (
         <div className="space-y-1.5"><Label>লিংক</Label><Input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://..." /></div>
       )}
-      {type === "PDF" && (
-        <div className="space-y-1.5"><Label>PDF URL</Label><Input value={filePath} onChange={(e) => setFilePath(e.target.value)} placeholder="https://... বা storage path" /></div>
-      )}
+      {type === "PDF" && <PdfField value={filePath} onChange={setFilePath} lessonId={initial?.id} />}
 
       <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" checked={isFreePreview} onChange={(e) => setIsFreePreview(e.target.checked)} className="size-4 accent-[oklch(0.52_0.24_292)]" />
+        <input type="checkbox" checked={isFreePreview} onChange={(e) => setIsFreePreview(e.target.checked)} className="size-4 accent-[var(--primary)]" />
         ফ্রি প্রিভিউ (ভর্তি ছাড়াই দেখা যাবে)
       </label>
 
       <DialogFooter>
         <Button onClick={submit} disabled={saving}>{saving && <Loader2 className="size-4 animate-spin" />} সংরক্ষণ</Button>
       </DialogFooter>
+    </div>
+  );
+}
+
+// Direct browser → Supabase PDF upload (bytes never go through Node).
+function PdfField({ value, onChange, lessonId }) {
+  const ref = useRef(null);
+  const [pct, setPct] = useState(null);
+
+  async function pick(e) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (file.type !== "application/pdf") return toast.error("শুধুমাত্র PDF ফাইল আপলোড করা যাবে");
+    setPct(0);
+    try {
+      // presign routes return raw JSON, not the API envelope
+      const res = await fetch("/api/v1/admin/uploads/lesson-file", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contentType: "application/pdf" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "প্রিসাইন ব্যর্থ হয়েছে");
+      await uploadDirectWithProgress(data.uploadUrl, file, "application/pdf", setPct);
+      // store the private storage path; students get a signed URL after the
+      // enrollment check in /api/v1/lessons/[id]/file
+      onChange(data.path);
+      toast.success("PDF আপলোড হয়েছে");
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setPct(null);
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <Label>PDF ফাইল</Label>
+      {value ? (
+        <div className="flex items-center gap-2 rounded-lg border border-accent bg-accent/10 p-3 text-sm">
+          <FileText className="size-4 shrink-0 text-accent" />
+          <span className="flex-1 truncate">{value}</span>
+          {lessonId && (
+            <a href={`/api/v1/lessons/${lessonId}/file`} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline">খুলুন</a>
+          )}
+          <button type="button" className="text-xs text-muted-foreground hover:text-destructive" onClick={() => onChange("")}>সরান</button>
+        </div>
+      ) : (
+        <Button type="button" variant="outline" className="w-full" onClick={() => ref.current?.click()} disabled={pct !== null}>
+          {pct !== null ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
+          {pct !== null ? `আপলোড হচ্ছে… ${pct}%` : "PDF আপলোড করুন"}
+        </Button>
+      )}
+      <input ref={ref} type="file" accept="application/pdf" hidden onChange={pick} />
+      <Input value={value ?? ""} onChange={(e) => onChange(e.target.value)} placeholder="অথবা বাইরের PDF লিংক পেস্ট করুন" />
     </div>
   );
 }

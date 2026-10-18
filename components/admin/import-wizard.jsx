@@ -207,7 +207,7 @@ function PreviewCard({ item, idx, subjects, onUpdate, onToggle }) {
     <Card className={cn("border-2", !item.include && "opacity-60", item.errors.length ? "border-destructive/30" : item.duplicate ? "border-secondary/30" : "border-accent/30")}>
       <CardContent className="space-y-2 p-3">
         <div className="flex items-start gap-2">
-          <input type="checkbox" checked={item.include} onChange={onToggle} className="mt-1 size-4 accent-[oklch(0.52_0.24_292)]" />
+          <input type="checkbox" checked={item.include} onChange={onToggle} className="mt-1 size-4 accent-[var(--primary)]" />
           <span className="text-xs font-semibold text-muted-foreground">#{idx + 1}</span>
           <div className="flex flex-1 flex-wrap gap-1">
             {item.errors.length === 0 && !item.duplicate && <Badge variant="success" className="text-[10px]"><Check className="mr-0.5 size-3" /> বৈধ</Badge>}

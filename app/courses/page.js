@@ -1,5 +1,6 @@
+import { Suspense } from "react";
 import { PlayCircle } from "lucide-react";
-import { requireUser } from "@/lib/auth/session";
+
 import { listPublishedCourses } from "@/lib/services/course.service";
 import { Card, CardContent } from "@/components/ui/card";
 import { CourseBrowser } from "@/components/courses/course-browser";
@@ -7,7 +8,6 @@ import { CourseBrowser } from "@/components/courses/course-browser";
 export const metadata = { title: "ভিডিও কোর্স" };
 
 export default async function CoursesPage() {
-  await requireUser();
   const courses = await listPublishedCourses();
 
   return (
@@ -22,7 +22,7 @@ export default async function CoursesPage() {
       {courses.length === 0 ? (
         <Card><CardContent className="py-16 text-center text-muted-foreground">এখন কোনো কোর্স প্রকাশিত হয়নি।</CardContent></Card>
       ) : (
-        <CourseBrowser courses={courses} />
+        <Suspense fallback={null}><CourseBrowser courses={courses} /></Suspense>
       )}
     </div>
   );

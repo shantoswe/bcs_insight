@@ -15,7 +15,7 @@ export default async function AdminDashboard() {
     { label: "মোট ইউজার", value: s.users, icon: Users, tone: "bg-primary/12 text-primary" },
     { label: "প্রশ্ন", value: s.questions, icon: ListChecks, tone: "bg-accent/15 text-accent-foreground" },
     { label: "পরীক্ষা", value: s.exams, icon: ClipboardList, tone: "bg-secondary/15 text-secondary" },
-    { label: "কোর্স", value: s.courses, icon: PlayCircle, tone: "bg-[oklch(0.78_0.16_75_/_0.2)] text-[oklch(0.45_0.12_70)]" },
+    { label: "কোর্স", value: s.courses, icon: PlayCircle, tone: "bg-warning/12 text-warning" },
     { label: "সম্পন্ন পরীক্ষা", value: s.attempts, icon: TrendingUp, tone: "bg-primary/12 text-primary" },
     { label: "মূল্যায়ন বাকি", value: s.writtenPending, icon: PenLine, tone: "bg-destructive/12 text-destructive" },
     { label: "পেমেন্ট বাকি", value: s.paymentsPending, icon: Wallet, tone: "bg-secondary/15 text-secondary" },

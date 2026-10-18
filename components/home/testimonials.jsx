@@ -1,67 +1,87 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Star, Quote, ChevronLeft, ChevronRight } from "lucide-react";
+import { Star, Quote, ChevronLeft, ChevronRight, MessageSquareQuote } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export function Testimonials({ items }) {
+export function Testimonials({ items, heading }) {
+  const h = heading ?? {};
   const reviews = items ?? [];
-  const [active, setActive] = useState(0);
+  const [page, setPage] = useState(0);
+  const [perPage, setPerPage] = useState(3);
 
+  // responsive page size: 1 on phones, 2 on tablets, 3 on desktop
   useEffect(() => {
-    if (reviews.length <= 1) return;
-    const t = setInterval(() => setActive((a) => (a + 1) % reviews.length), 7000);
-    return () => clearInterval(t);
-  }, [reviews.length]);
+    const calc = () => setPerPage(window.innerWidth < 640 ? 1 : window.innerWidth < 1024 ? 2 : 3);
+    calc();
+    window.addEventListener("resize", calc);
+    return () => window.removeEventListener("resize", calc);
+  }, []);
+
+  const pages = Math.max(1, Math.ceil(reviews.length / perPage));
+  useEffect(() => { if (page > pages - 1) setPage(0); }, [pages, page]);
 
   if (reviews.length === 0) return null;
+  const start = page * perPage;
+  const visible = reviews.slice(start, start + perPage);
 
   return (
-    <section className="brand-gradient-soft">
-      <div className="mx-auto max-w-4xl px-4 py-16">
-        <div className="mx-auto mb-8 max-w-2xl text-center">
-          <h2 className="text-3xl font-bold tracking-tight">শিক্ষার্থীদের অভিজ্ঞতা</h2>
-          <p className="mt-2 text-muted-foreground">যারা আমাদের সাথে প্রস্তুতি নিয়েছেন</p>
-        </div>
-
-        <div className="relative overflow-hidden">
-          <div className="flex transition-transform duration-500" style={{ transform: `translateX(-${active * 100}%)` }}>
-            {reviews.map((r, i) => (
-              <div key={r.id ?? i} className="w-full shrink-0 px-2">
-                <div className="mx-auto max-w-2xl rounded-2xl border bg-card p-8 text-center soft-shadow">
-                  <Quote className="mx-auto mb-3 size-8 text-primary/30" />
-                  <div className="mb-3 flex justify-center gap-0.5">
-                    {Array.from({ length: 5 }).map((_, j) => (
-                      <Star key={j} className={cn("size-4", j < (r.rating ?? 5) ? "fill-[oklch(0.8_0.15_85)] text-[oklch(0.8_0.15_85)]" : "text-border")} />
-                    ))}
-                  </div>
-                  <p className="text-lg leading-relaxed">“{r.text}”</p>
-                  <div className="mt-5 flex items-center justify-center gap-3">
-                    <span className="flex size-11 items-center justify-center rounded-full brand-gradient font-bold text-white">
-                      {(r.name ?? "?").charAt(0)}
-                    </span>
-                    <div className="text-left">
-                      <p className="font-semibold">{r.name}</p>
-                      {r.role && <p className="text-sm text-muted-foreground">{r.role}</p>}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
+    <section className="border-y bg-muted/40">
+      <div className="mx-auto max-w-6xl px-4 py-14 md:py-16">
+        <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            {h.eyebrow !== "" && (
+              <span className="eyebrow"><MessageSquareQuote className="size-3.5" /> {h.eyebrow || "Student Reviews"}</span>
+            )}
+            <h2 className="mt-2 text-2xl font-bold tracking-tight md:text-3xl">
+              {h.title || "আমাদের শিক্ষার্থীদের মতামত"}
+            </h2>
           </div>
-
-          {reviews.length > 1 && (
-            <div className="mt-6 flex items-center justify-center gap-3">
-              <button onClick={() => setActive((a) => (a - 1 + reviews.length) % reviews.length)} className="flex size-9 items-center justify-center rounded-full border bg-card hover:bg-muted"><ChevronLeft className="size-4" /></button>
-              <div className="flex gap-1.5">
-                {reviews.map((_, i) => (
-                  <button key={i} onClick={() => setActive(i)} className={cn("h-2 rounded-full transition-all", i === active ? "w-6 bg-primary" : "w-2 bg-border")} />
-                ))}
-              </div>
-              <button onClick={() => setActive((a) => (a + 1) % reviews.length)} className="flex size-9 items-center justify-center rounded-full border bg-card hover:bg-muted"><ChevronRight className="size-4" /></button>
+          {pages > 1 && (
+            <div className="flex gap-2">
+              <button onClick={() => setPage((p) => (p - 1 + pages) % pages)} aria-label="আগের"
+                className="flex size-9 items-center justify-center rounded-full border bg-card transition hover:border-primary/40 hover:text-primary">
+                <ChevronLeft className="size-4" />
+              </button>
+              <button onClick={() => setPage((p) => (p + 1) % pages)} aria-label="পরের"
+                className="flex size-9 items-center justify-center rounded-full border bg-card transition hover:border-primary/40 hover:text-primary">
+                <ChevronRight className="size-4" />
+              </button>
             </div>
           )}
         </div>
+
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {visible.map((r, i) => (
+            <figure key={r.id ?? `${page}-${i}`} className="flex h-full flex-col rounded-xl border bg-card p-5 soft-shadow">
+              <Quote className="size-6 text-primary/25" />
+              <blockquote className="mt-3 flex-1 text-[0.9rem] leading-relaxed">{r.text}</blockquote>
+              <figcaption className="mt-5 flex items-center gap-3 border-t pt-4">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 font-bold text-primary">
+                  {(r.name ?? "?").charAt(0)}
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold">{r.name}</p>
+                  {r.role && <p className="truncate text-xs text-muted-foreground">{r.role}</p>}
+                  <div className="mt-1 flex gap-0.5">
+                    {Array.from({ length: 5 }).map((_, j) => (
+                      <Star key={j} className={cn("size-3", j < (r.rating ?? 5) ? "fill-warning text-warning" : "text-border")} />
+                    ))}
+                  </div>
+                </div>
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+
+        {pages > 1 && (
+          <div className="mt-7 flex justify-center gap-1.5">
+            {Array.from({ length: pages }).map((_, i) => (
+              <button key={i} onClick={() => setPage(i)} aria-label={`পৃষ্ঠা ${i + 1}`}
+                className={cn("h-2 rounded-full transition-all", i === page ? "w-6 bg-primary" : "w-2 bg-border")} />
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );

@@ -13,7 +13,7 @@ export function Toaster(props) {
           description: "text-muted-foreground",
           actionButton: "bg-primary text-primary-foreground",
           error: "!text-destructive",
-          success: "!text-[oklch(0.45_0.13_150)]",
+          success: "!text-success",
         },
       }}
       {...props}

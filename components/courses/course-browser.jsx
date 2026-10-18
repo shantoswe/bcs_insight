@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { PlayCircle, Layers, Users } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
@@ -18,13 +19,20 @@ const TYPE_LABEL = {
 // All courses in one place, filterable by track (Preliminary / Written / Exam).
 export function CourseBrowser({ courses }) {
   const [tab, setTab] = useState("ALL");
+  const sp = useSearchParams();
+  const q = (sp.get("q") || "").trim().toLowerCase();
+  const categorySlug = (sp.get("category") || "").trim();
 
   // only show tabs for types that actually have courses
   const presentTypes = useMemo(
     () => ["PRELIMINARY", "WRITTEN", "EXAM", "GENERAL"].filter((t) => courses.some((c) => c.courseType === t)),
     [courses]
   );
-  const filtered = tab === "ALL" ? courses : courses.filter((c) => c.courseType === tab);
+  const byCategory = categorySlug ? courses.filter((c) => c.category?.slug === categorySlug) : courses;
+  const filtered = (tab === "ALL" ? byCategory : byCategory.filter((c) => c.courseType === tab)).filter((c) =>
+    !q || `${c.titleBn ?? ""} ${c.titleEn ?? ""} ${c.descriptionBn ?? ""}`.toLowerCase().includes(q)
+  );
+  const categoryName = categorySlug ? (courses.find((c) => c.category?.slug === categorySlug)?.category?.nameBn ?? categorySlug) : "";
 
   return (
     <div>
@@ -36,6 +44,19 @@ export function CourseBrowser({ courses }) {
           ))}
         </TabsList>
       </Tabs>
+
+      {categorySlug && (
+        <div className="mb-4 flex flex-wrap items-center gap-2 text-sm">
+          <span className="rounded-full bg-primary/10 px-3 py-1 font-medium text-primary">ক্যাটাগরি: {categoryName}</span>
+          <Link href="/courses" className="text-muted-foreground hover:text-primary">সব কোর্স দেখুন ✕</Link>
+        </div>
+      )}
+
+      {q && (
+        <p className="mb-4 text-sm text-muted-foreground">
+          “<span className="font-medium text-foreground">{q}</span>” — {filtered.length}টি কোর্স পাওয়া গেছে
+        </p>
+      )}
 
       {filtered.length === 0 ? (
         <Card><CardContent className="py-16 text-center text-muted-foreground">এই বিভাগে কোনো কোর্স নেই।</CardContent></Card>

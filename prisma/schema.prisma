@@ -1,5 +1,5 @@
 // ============================================================
-// AUS Prep — Unified exam-prep e-learning platform
+// BCS Insight — Unified exam-prep e-learning platform
 // Backbone: aus-bcs (Supabase-native, normalized).
 // Folded in: alokbortika written module + model answers,
 //            fresh Bunny Stream video course module.
@@ -180,6 +180,12 @@ model JobCategory {
   icon     String  @default("📝")
   order    Int     @default(0)
   isActive Boolean @default(true)
+
+  // home-page card presentation
+  imageUrl   String? // optional header image for the category card
+  color      String   @default("navy") // navy | blue | maroon | amber | green
+  highlights String[] @default([]) // bullet points shown on the card
+  showOnHome Boolean  @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

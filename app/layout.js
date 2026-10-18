@@ -1,13 +1,13 @@
 import "./globals.css";
-import { Hind_Siliguri } from "next/font/google";
+import { Noto_Serif_Bengali } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { Analytics } from "@/components/analytics";
 import { getSettings, getTrackingConfig } from "@/lib/services/settings.service";
 
-const hind = Hind_Siliguri({
+const bengali = Noto_Serif_Bengali({
   subsets: ["latin", "bengali"],
-  weight: ["300", "400", "500", "600", "700"],
-  variable: "--font-hind",
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-bengali",
   display: "swap",
 });
 
@@ -21,7 +21,7 @@ export async function generateMetadata() {
   } catch {
     s = {};
   }
-  const name = s.siteName || "AUS Prep";
+  const name = s.siteName || "BCS Insight";
   const title = s.seoTitle || `${name} — চাকরির পরীক্ষার প্রস্তুতি`;
   const description =
     s.seoDescription ||
@@ -67,7 +67,7 @@ export default async function RootLayout({ children }) {
   }
 
   return (
-    <html lang="bn" className={hind.variable}>
+    <html lang="bn" className={bengali.variable}>
       <body className="font-sans antialiased min-h-screen">
         {tracking.gtmId && (
           <noscript>

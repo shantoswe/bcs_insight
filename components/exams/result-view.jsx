@@ -257,9 +257,9 @@ function Leaderboard({ examId }) {
               <span
                 className={cn(
                   "flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-bold",
-                  r.rank === 1 && "bg-[oklch(0.85_0.15_90)] text-[oklch(0.4_0.1_80)]",
+                  r.rank === 1 && "bg-warning/15 text-warning",
                   r.rank === 2 && "bg-muted text-foreground",
-                  r.rank === 3 && "bg-[oklch(0.8_0.1_50)] text-white",
+                  r.rank === 3 && "bg-secondary/15 text-secondary",
                   r.rank > 3 && "bg-primary/10 text-primary"
                 )}
               >

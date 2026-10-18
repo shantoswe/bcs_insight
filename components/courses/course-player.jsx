@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -23,7 +24,7 @@ const TYPE_ICON = {
   QUIZ: ClipboardList,
 };
 
-export function CoursePlayer({ course, paymentConfig }) {
+export function CoursePlayer({ course, paymentConfig, isLoggedIn = true }) {
   const router = useRouter();
   const allLessons = useMemo(() => course.sections.flatMap((s) => s.lessons), [course]);
   const firstPlayable = allLessons.find((l) => l.bunnyVideoId || l.isFreePreview) ?? allLessons[0];
@@ -133,11 +134,19 @@ export function CoursePlayer({ course, paymentConfig }) {
                   ) : null}
                 </div>
                 <div className="flex gap-2">
-                  {active.type === "PDF" && active.filePath && (
-                    <Button asChild variant="outline" size="sm"><a href={active.filePath} target="_blank" rel="noreferrer">PDF খুলুন</a></Button>
-                  )}
-                  {(active.type === "RESOURCE" || active.type === "LIVE_CLASS") && active.linkUrl && (
-                    <Button asChild variant="outline" size="sm"><a href={active.linkUrl} target="_blank" rel="noreferrer">লিংক খুলুন</a></Button>
+                  {active.type !== "VIDEO" && (
+                    active.hasMaterial ? (
+                      <Button asChild variant="outline" size="sm">
+                        <a href={`/api/v1/lessons/${active.id}/file`} target="_blank" rel="noreferrer">
+                          {active.type === "PDF" ? "PDF খুলুন" : "লিংক খুলুন"}
+                        </a>
+                      </Button>
+                    ) : (
+                      <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <Lock className="size-3.5" />
+                        {locked && !active.isFreePreview ? "কোর্সে ভর্তি হয়ে দেখুন" : "কোনো ফাইল নেই"}
+                      </span>
+                    )
                   )}
                   {course.enrolled && (
                     <Button size="sm" variant={progress[active.id] ? "outline" : "accent"} onClick={() => markComplete(active)}>
@@ -164,6 +173,13 @@ export function CoursePlayer({ course, paymentConfig }) {
                   <Progress value={pct} />
                   <p className="mt-2 text-xs text-muted-foreground">{doneCount}/{allLessons.length} লেসন সম্পন্ন</p>
                 </>
+              ) : !isLoggedIn ? (
+                <Link
+                  href={`/login?next=/courses/${course.slug}`}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:brightness-110"
+                >
+                  <PlayCircle className="size-4" /> লগইন করে ভর্তি হন
+                </Link>
               ) : course.isFree || Number(course.priceBDT) === 0 ? (
                 <Button className="w-full" onClick={enroll} disabled={enrolling}>
                   {enrolling ? <Loader2 className="size-4 animate-spin" /> : <PlayCircle className="size-4" />}

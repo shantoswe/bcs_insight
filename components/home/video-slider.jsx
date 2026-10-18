@@ -20,7 +20,8 @@ function toEmbed(url) {
   }
 }
 
-export function VideoSlider({ videos }) {
+export function VideoSlider({ videos, heading }) {
+  const h = heading ?? {};
   const items = (videos ?? []).map((v) => ({ ...v, embed: toEmbed(v.url) })).filter((v) => v.embed);
   const [active, setActive] = useState(0);
 
@@ -38,9 +39,9 @@ export function VideoSlider({ videos }) {
     <section className="mx-auto max-w-6xl px-4 py-12 md:py-16">
       <div className="mx-auto mb-8 max-w-2xl text-center">
         <span className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-secondary/12 px-3 py-1 text-sm font-semibold text-secondary">
-          <PlayCircle className="size-4" /> ভিডিও
+          <PlayCircle className="size-4" /> {h.eyebrow || "ভিডিও"}
         </span>
-        <h2 className="text-3xl font-bold tracking-tight">ফ্রি ক্লাস ও পরিচিতি</h2>
+        <h2 className="text-3xl font-bold tracking-tight">{h.title || "ফ্রি ক্লাস ও পরিচিতি"}</h2>
       </div>
 
       <div className="relative">

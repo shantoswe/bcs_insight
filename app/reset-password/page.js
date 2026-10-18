@@ -36,7 +36,7 @@ export default function ResetPasswordPage() {
         <span className="flex size-10 items-center justify-center rounded-xl brand-gradient text-white">
           <GraduationCap className="size-6" />
         </span>
-        AUS Prep
+        BCS Insight
       </Link>
       <Card className="w-full max-w-md soft-shadow">
         <CardHeader>

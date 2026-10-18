@@ -1,4 +1,4 @@
-# Deploying AUS Prep on a DigitalOcean droplet
+# Deploying BCS Insight on a DigitalOcean droplet
 
 A plain Node server behind Nginx, kept alive by PM2, with a Let's Encrypt
 certificate. No Vercel, no serverless — `next start` on port 3000.
@@ -45,7 +45,7 @@ sudo npm install -g pm2
 
 ```bash
 cd /var/www
-sudo git clone <your-repo> aus-prep && cd aus-prep
+sudo git clone <your-repo> bcs-insight && cd bcs-insight
 sudo chown -R $USER:$USER .
 
 cp .env.example .env
@@ -66,16 +66,16 @@ pm2 save
 pm2 startup            # run the command it prints, to survive reboots
 ```
 
-The `aus-prep` app serves on `127.0.0.1:3000`. The `aus-prep-cron` process
+The `bcs-insight` app serves on `127.0.0.1:3000`. The `bcs-insight-cron` process
 ticks every minute to flip live-exam windows and publish results (the app also
 sweeps opportunistically on traffic, so this is only a fallback).
 
 ## 6. Nginx reverse proxy
 
 ```bash
-sudo cp deploy/nginx.conf.example /etc/nginx/sites-available/aus-prep
-sudo nano /etc/nginx/sites-available/aus-prep    # set your server_name
-sudo ln -s /etc/nginx/sites-available/aus-prep /etc/nginx/sites-enabled/
+sudo cp deploy/nginx.conf.example /etc/nginx/sites-available/bcs-insight
+sudo nano /etc/nginx/sites-available/bcs-insight    # set your server_name
+sudo ln -s /etc/nginx/sites-available/bcs-insight /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
@@ -91,12 +91,12 @@ Certbot edits the Nginx config to add the TLS block and sets up auto-renewal.
 ## 8. Updating a deployed instance
 
 ```bash
-cd /var/www/aus-prep
+cd /var/www/bcs-insight
 git pull
 npm ci
 npx prisma migrate deploy
 npm run build
-pm2 reload aus-prep
+pm2 reload bcs-insight
 ```
 
 ## Notes

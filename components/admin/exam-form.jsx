@@ -109,7 +109,7 @@ export function ExamForm({ initial, onSaved }) {
       )}
 
       <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" checked={f.instantResult} onChange={(e) => set("instantResult", e.target.checked)} className="size-4 accent-[oklch(0.52_0.24_292)]" />
+        <input type="checkbox" checked={f.instantResult} onChange={(e) => set("instantResult", e.target.checked)} className="size-4 accent-[var(--primary)]" />
         সাবমিটের পরপরই ফলাফল দেখান (লাইভ পরীক্ষায় মেধাতালিকা আলাদা)
       </label>
 

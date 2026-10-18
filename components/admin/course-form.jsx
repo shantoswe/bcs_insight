@@ -1,9 +1,9 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Loader2, Upload, ImageIcon } from "lucide-react";
-import { post, patch } from "@/lib/client-api";
+import { get, post, patch } from "@/lib/client-api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,8 +23,12 @@ const COURSE_TYPES = [
 export function CourseForm({ initial, onSaved }) {
   const isEdit = !!initial?.id;
   const [saving, setSaving] = useState(false);
+  const [categories, setCategories] = useState([]);
+  useEffect(() => { get("/api/v1/admin/categories").then(setCategories).catch(() => {}); }, []);
+
   const [f, setF] = useState({
     courseType: initial?.courseType ?? "PRELIMINARY",
+    categoryId: initial?.categoryId ?? "",
     titleBn: initial?.titleBn ?? "",
     titleEn: initial?.titleEn ?? "",
     descriptionBn: initial?.descriptionBn ?? "",
@@ -40,6 +44,7 @@ export function CourseForm({ initial, onSaved }) {
     if (!f.titleBn && !f.titleEn) return toast.error("শিরোনাম দিন");
     const payload = {
       courseType: f.courseType,
+      categoryId: f.categoryId || null,
       titleEn: f.titleEn || f.titleBn,
       titleBn: f.titleBn || null,
       descriptionBn: f.descriptionBn || null,
@@ -63,12 +68,29 @@ export function CourseForm({ initial, onSaved }) {
 
   return (
     <div className="space-y-4">
-      <div className="space-y-1.5">
-        <Label>কোর্সের ধরন</Label>
-        <Select value={f.courseType} onValueChange={(v) => set("courseType", v)}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>{COURSE_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
-        </Select>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label>কোর্সের ধরন</Label>
+          <Select value={f.courseType} onValueChange={(v) => set("courseType", v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>{COURSE_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label>ক্যাটাগরি (BCS / ব্যাংক / প্রাথমিক …)</Label>
+          <Select value={f.categoryId || "none"} onValueChange={(v) => set("categoryId", v === "none" ? "" : v)}>
+            <SelectTrigger><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">ক্যাটাগরি নেই</SelectItem>
+              {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.nameBn || c.nameEn}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          {categories.length === 0 && (
+            <p className="text-[11px] text-muted-foreground">
+              প্রথমে <b>বিষয় ও টপিক</b> পেজে ক্যাটাগরি যোগ করুন।
+            </p>
+          )}
+        </div>
       </div>
       <div className="space-y-1.5"><Label>শিরোনাম (বাংলা)</Label><Input value={f.titleBn} onChange={(e) => set("titleBn", e.target.value)} /></div>
       <div className="space-y-1.5"><Label>শিরোনাম (English)</Label><Input value={f.titleEn} onChange={(e) => set("titleEn", e.target.value)} /></div>
@@ -77,13 +99,13 @@ export function CourseForm({ initial, onSaved }) {
       <ThumbnailField value={f.thumbnailPath} onChange={(v) => set("thumbnailPath", v)} />
 
       <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" checked={f.isFree} onChange={(e) => set("isFree", e.target.checked)} className="size-4 accent-[oklch(0.52_0.24_292)]" /> ফ্রি কোর্স
+        <input type="checkbox" checked={f.isFree} onChange={(e) => set("isFree", e.target.checked)} className="size-4 accent-[var(--primary)]" /> ফ্রি কোর্স
       </label>
       {!f.isFree && (
         <div className="space-y-1.5"><Label>মূল্য (৳)</Label><Input type="number" value={f.priceBDT} onChange={(e) => set("priceBDT", e.target.value)} /></div>
       )}
       <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" checked={f.isPublished} onChange={(e) => set("isPublished", e.target.checked)} className="size-4 accent-[oklch(0.52_0.24_292)]" /> প্রকাশিত (শিক্ষার্থীদের তালিকায় দেখাবে)
+        <input type="checkbox" checked={f.isPublished} onChange={(e) => set("isPublished", e.target.checked)} className="size-4 accent-[var(--primary)]" /> প্রকাশিত (শিক্ষার্থীদের তালিকায় দেখাবে)
       </label>
 
       <DialogFooter>

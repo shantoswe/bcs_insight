@@ -1,4 +1,4 @@
-# AUS Prep — চাকরির পরীক্ষার প্রস্তুতি প্ল্যাটফর্ম
+# BCS Insight — চাকরির পরীক্ষার প্রস্তুতি প্ল্যাটফর্ম
 
 A full exam-prep e-learning platform: MCQ practice, timed live mock tests with
 merit lists, a written-exam module with model answers and evaluator workflow,
@@ -47,7 +47,7 @@ cp .env.example .env      # fill in Supabase, DATABASE_URL/DIRECT_URL, Bunny
 npm install
 npx prisma migrate dev    # create tables
 psql "$DIRECT_URL" -f prisma/manual/one_live_attempt.sql   # one-live-attempt index
-npm run db:seed           # demo data + admin@ausprep.test / Password123!
+npm run db:seed           # demo data + admin@bcsinsight.test / Password123!
 npm run dev               # http://localhost:3000
 ```
 
@@ -56,8 +56,8 @@ Create the three private Supabase Storage buckets first: `avatars`,
 
 ### Seed accounts
 
-- **Admin:** `admin@ausprep.test` / `Password123!`
-- **Students:** `student1..3@ausprep.test` / `Password123!`
+- **Admin:** `admin@bcsinsight.test` / `Password123!`
+- **Students:** `student1..3@bcsinsight.test` / `Password123!`
 
 To promote your own account: register, then `npm run make-admin -- you@example.com`.
 

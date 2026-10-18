@@ -16,6 +16,21 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger,
 } from "@/components/ui/dialog";
 
+// Category fields. The last four drive the home-page category card
+// (হোম পেজে ক্যাটাগরি কার্ড), which links to /courses?category=<slug>.
+const CATEGORY_FIELDS = [
+  ["nameBn", "নাম (বাংলা)"],
+  ["nameEn", "নাম (English)"],
+  ["icon", "আইকন (ইমোজি)"],
+  ["order", "ক্রম", "number"],
+  ["showOnHome", "হোম পেজে কার্ড দেখাও", "checkbox"],
+  ["color", "কার্ডের রঙ", "select", [
+    ["navy", "নেভি"], ["blue", "নীল"], ["maroon", "মেরুন"], ["amber", "অ্যাম্বার"], ["green", "সবুজ"],
+  ]],
+  ["imageUrl", "কার্ডের ছবি (URL — ফাইল ম্যানেজার থেকে কপি করুন)"],
+  ["highlights", "কার্ডের পয়েন্ট (প্রতি লাইনে একটি)", "lines"],
+];
+
 export function TaxonomyManager() {
   const [tree, setTree] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -48,7 +63,7 @@ export function TaxonomyManager() {
       <Column
         title="ক্যাটাগরি"
         addLabel="নতুন ক্যাটাগরি"
-        fields={[["nameBn", "নাম (বাংলা)"], ["nameEn", "নাম (English)"], ["icon", "আইকন (ইমোজি)"]]}
+        fields={CATEGORY_FIELDS}
         onCreate={(data) => post("/api/v1/admin/categories", data).then(reload)}
         items={tree.map((c) => ({ id: c.id, label: `${c.icon ?? "📚"} ${c.nameBn}`, sub: c.nameEn, raw: c }))}
         selectedId={catId}
@@ -142,13 +157,28 @@ function EntityDialog({ trigger, title, fields, initial, onSubmit }) {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (open) setForm(Object.fromEntries(fields.map(([k]) => [k, initial?.[k] ?? ""])));
+    if (!open) return;
+    setForm(Object.fromEntries(fields.map(([k, , type]) => {
+      const v = initial?.[k];
+      if (type === "checkbox") return [k, v ?? true];
+      if (type === "lines") return [k, (v ?? []).join("\n")];
+      return [k, v ?? ""];
+    })));
   }, [open]); // eslint-disable-line
 
   async function submit() {
     setSaving(true);
     try {
-      await onSubmit(form);
+      // turn the UI shapes back into what the API validators expect
+      const payload = { ...form };
+      for (const [k, , type] of fields) {
+        if (type === "lines")
+          payload[k] = String(payload[k] ?? "").split("\n").map((l) => l.trim()).filter(Boolean).slice(0, 8);
+        if (type === "checkbox") payload[k] = !!payload[k];
+        if (type === "number") payload[k] = Number(payload[k] || 0);
+        if (payload[k] === "") delete payload[k];
+      }
+      await onSubmit(payload);
       toast.success("সংরক্ষিত হয়েছে");
       setOpen(false);
     } catch (e) {
@@ -164,10 +194,44 @@ function EntityDialog({ trigger, title, fields, initial, onSubmit }) {
       <DialogContent>
         <DialogHeader><DialogTitle>{title}</DialogTitle></DialogHeader>
         <div className="space-y-3">
-          {fields.map(([key, label]) => (
+          {fields.map(([key, label, type, options]) => (
             <div key={key} className="space-y-1.5">
-              <Label>{label}</Label>
-              <Input value={form[key] ?? ""} onChange={(e) => setForm({ ...form, [key]: e.target.value })} />
+              {type === "checkbox" ? (
+                <label className="flex cursor-pointer items-center gap-2 text-sm font-medium">
+                  <input
+                    type="checkbox"
+                    className="size-4 accent-[var(--primary)]"
+                    checked={!!form[key]}
+                    onChange={(e) => setForm({ ...form, [key]: e.target.checked })}
+                  />
+                  {label}
+                </label>
+              ) : (
+                <>
+                  <Label>{label}</Label>
+                  {type === "select" ? (
+                    <Select value={form[key] || options[0][0]} onValueChange={(v) => setForm({ ...form, [key]: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {options.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  ) : type === "lines" ? (
+                    <textarea
+                      rows={4}
+                      className="w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+                      value={form[key] ?? ""}
+                      onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+                    />
+                  ) : (
+                    <Input
+                      type={type === "number" ? "number" : "text"}
+                      value={form[key] ?? ""}
+                      onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+                    />
+                  )}
+                </>
+              )}
             </div>
           ))}
         </div>

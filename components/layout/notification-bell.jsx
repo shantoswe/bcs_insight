@@ -13,7 +13,7 @@ import {
 const TYPE_ICON = {
   ANNOUNCEMENT: { icon: Megaphone, cls: "text-primary" },
   EXAM_REMINDER: { icon: Radio, cls: "text-secondary" },
-  RESULT_PUBLISHED: { icon: Trophy, cls: "text-[oklch(0.65_0.15_75)]" },
+  RESULT_PUBLISHED: { icon: Trophy, cls: "text-warning" },
   SYSTEM: { icon: Bell, cls: "text-muted-foreground" },
 };
 

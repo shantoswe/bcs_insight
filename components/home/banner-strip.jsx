@@ -8,7 +8,7 @@ const COLORS = {
   primary: "bg-primary text-primary-foreground",
   coral: "bg-secondary text-secondary-foreground",
   emerald: "bg-accent text-accent-foreground",
-  gold: "bg-[oklch(0.8_0.15_85)] text-[oklch(0.3_0.08_85)]",
+  gold: "bg-warning text-white",
 };
 
 // Rotating announcement strip across the top of the home page.

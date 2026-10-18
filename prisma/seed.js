@@ -60,14 +60,14 @@ async function ensureUser({ email, password, name, role }) {
 async function main() {
   console.log("→ Seeding auth users…");
   const adminId = await ensureUser({
-    email: "admin@ausprep.test",
+    email: "admin@bcsinsight.test",
     password: "Password123!",
     name: "AUS Admin",
     role: "ADMIN",
   });
   for (let i = 1; i <= 3; i++) {
     await ensureUser({
-      email: `student${i}@ausprep.test`,
+      email: `student${i}@bcsinsight.test`,
       password: "Password123!",
       name: `Student ${i}`,
       role: "STUDENT",
@@ -209,12 +209,12 @@ async function main() {
   await prisma.siteSetting.upsert({
     where: { key: "siteName" },
     update: {},
-    create: { key: "siteName", value: "AUS Prep" },
+    create: { key: "siteName", value: "BCS Insight" },
   });
 
   console.log("\n✅ Seed complete.");
-  console.log("   Admin:    admin@ausprep.test / Password123!");
-  console.log("   Students: student1..3@ausprep.test / Password123!");
+  console.log("   Admin:    admin@bcsinsight.test / Password123!");
+  console.log("   Students: student1..3@bcsinsight.test / Password123!");
 }
 
 main()

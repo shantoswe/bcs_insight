@@ -125,7 +125,7 @@ function VoiceRecorder({ voiceUrl, onSaved, onRemove }) {
         </div>
       )}
       {state === "preview" && previewUrl && (
-        <div className="space-y-2 rounded-xl border border-warning/30 bg-[oklch(0.78_0.16_75_/_0.1)] p-3">
+        <div className="space-y-2 rounded-xl border border-warning/30 bg-warning/10 p-3">
           <div className="flex items-center gap-2 text-xs font-semibold"><Play size={14} /> প্রিভিউ — শুনে সিদ্ধান্ত নিন</div>
           <audio controls src={previewUrl} className="h-8 w-full" />
           <div className="flex gap-2">

@@ -5,12 +5,13 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, ListChecks, ClipboardList, PenLine, PlayCircle,
-  FolderTree, Users, Settings, GraduationCap, LogOut, Menu, X, ExternalLink,
-  Home, FolderOpen, Wallet,
+  FolderTree, Users, Settings, LogOut, Menu, X, ExternalLink,
+  Home, FolderOpen, Wallet, LayoutTemplate,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { BrandMark } from "@/components/layout/brand-mark";
 
 const NAV = [
   { href: "/admin", label: "ড্যাশবোর্ড", icon: LayoutDashboard, perm: "dashboard", exact: true },
@@ -23,10 +24,11 @@ const NAV = [
   { href: "/admin/users", label: "ইউজার", icon: Users, perm: "users" },
   { href: "/admin/files", label: "ফাইল ম্যানেজার", icon: FolderOpen, perm: "settings" },
   { href: "/admin/settings/homepage", label: "হোমপেজ ও SEO", icon: Home, perm: "settings" },
+  { href: "/admin/settings/menu", label: "হেডার ও ফুটার", icon: LayoutTemplate, perm: "settings" },
   { href: "/admin/settings", label: "সেটিংস", icon: Settings, perm: "settings", exact: true },
 ];
 
-export function AdminSidebar({ user }) {
+export function AdminSidebar({ user, brand }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
@@ -67,12 +69,7 @@ export function AdminSidebar({ user }) {
     <>
       {/* mobile top bar */}
       <div className="sticky top-0 z-30 flex items-center justify-between border-b bg-card px-4 py-3 lg:hidden">
-        <Link href="/admin" className="flex items-center gap-2 font-bold">
-          <span className="flex size-8 items-center justify-center rounded-lg brand-gradient text-white">
-            <GraduationCap className="size-4" />
-          </span>
-          অ্যাডমিন
-        </Link>
+        <BrandMark href="/admin" siteName="অ্যাডমিন" logoUrl={brand?.logoUrl} size="sm" />
         <button onClick={() => setOpen((v) => !v)}>{open ? <X /> : <Menu />}</button>
       </div>
 
@@ -84,12 +81,7 @@ export function AdminSidebar({ user }) {
 
       {/* desktop sidebar */}
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r bg-card p-4 lg:flex">
-        <Link href="/admin" className="mb-6 flex items-center gap-2 px-2 font-bold">
-          <span className="flex size-9 items-center justify-center rounded-xl brand-gradient text-white">
-            <GraduationCap className="size-5" />
-          </span>
-          <span>AUS Prep <span className="text-xs font-normal text-muted-foreground">Admin</span></span>
-        </Link>
+        <div className="mb-6 px-2"><BrandMark href="/admin" siteName={brand?.siteName} logoUrl={brand?.logoUrl} size="md" /><span className="ml-11 block text-xs text-muted-foreground">Admin</span></div>
         <Links />
         <div className="mt-auto space-y-2 border-t pt-4">
           <Button asChild variant="outline" size="sm" className="w-full justify-start">

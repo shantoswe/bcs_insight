@@ -1,21 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
-import { Loader2, Save, Megaphone, Send } from "lucide-react";
+import { Loader2, Save, Megaphone, Send, BadgeCheck, PanelsTopLeft, LayoutTemplate } from "lucide-react";
 import { get, patch, post } from "@/lib/client-api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ImageField } from "@/components/admin/image-field";
 
-const FIELDS = [
-  ["siteName", "সাইটের নাম", "input"],
-  ["tagline", "ট্যাগলাইন", "input"],
-  ["heroTitle", "হিরো শিরোনাম", "input"],
-  ["heroSubtitle", "হিরো সাবটাইটেল", "textarea"],
-];
+// Brand identity lives here (main settings). Page content lives in
+// হোমপেজ ও SEO, menus in হেডার ও ফুটার.
+const KEYS = ["siteName", "tagline", "logoUrl", "faviconUrl"];
 
 export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(true);
@@ -29,11 +28,12 @@ export default function AdminSettingsPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  function set(key, val) { setForm((p) => ({ ...p, [key]: val })); }
+
   async function save() {
     setSaving(true);
     try {
-      const patchBody = Object.fromEntries(FIELDS.map(([k]) => [k, form[k] ?? ""]));
-      await patch("/api/v1/admin/settings", patchBody);
+      await patch("/api/v1/admin/settings", Object.fromEntries(KEYS.map((k) => [k, form[k] ?? ""])));
       toast.success("সংরক্ষিত হয়েছে");
     } catch (e) {
       toast.error(e.message);
@@ -48,22 +48,48 @@ export default function AdminSettingsPage() {
   return (
     <div className="p-5 lg:p-8">
       <h1 className="text-2xl font-bold">সাইট সেটিংস</h1>
-      <p className="mb-6 text-muted-foreground">হোম পেজের টেক্সট ও ব্র্যান্ডিং পরিবর্তন করুন।</p>
+      <p className="mb-6 text-muted-foreground">সাইটের নাম, লোগো ও ফেভিকন এখানে পরিবর্তন করুন।</p>
 
       <Card className="max-w-2xl">
-        <CardHeader><CardTitle>সাধারণ</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><BadgeCheck className="size-5 text-primary" /> ব্র্যান্ড পরিচয়</CardTitle>
+        </CardHeader>
         <CardContent className="space-y-4">
-          {FIELDS.map(([key, label, kind]) => (
-            <div key={key} className="space-y-1.5">
-              <Label>{label}</Label>
-              {kind === "textarea" ? (
-                <Textarea value={form[key] ?? ""} onChange={(e) => setForm({ ...form, [key]: e.target.value })} />
-              ) : (
-                <Input value={form[key] ?? ""} onChange={(e) => setForm({ ...form, [key]: e.target.value })} />
-              )}
-            </div>
-          ))}
-          <Button onClick={save} disabled={saving}>{saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />} সংরক্ষণ</Button>
+          <div className="space-y-1.5">
+            <Label>সাইটের নাম</Label>
+            <Input value={form.siteName ?? ""} onChange={(e) => set("siteName", e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>ট্যাগলাইন</Label>
+            <Input value={form.tagline ?? ""} onChange={(e) => set("tagline", e.target.value)} />
+          </div>
+          <ImageField
+            label="লোগো"
+            value={form.logoUrl}
+            onChange={(v) => set("logoUrl", v)}
+            hint="হেডার, ফুটার ও অ্যাডমিন সাইডবারে দেখাবে · PNG/SVG, প্রায় ৪০px উচ্চতা"
+          />
+          <ImageField
+            label="ফেভিকন"
+            value={form.faviconUrl}
+            onChange={(v) => set("faviconUrl", v)}
+            hint="ব্রাউজার ট্যাবের আইকন · 32×32 PNG/ICO"
+          />
+          <Button onClick={save} disabled={saving}>
+            {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />} সংরক্ষণ
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* where the rest of the editable content lives */}
+      <Card className="mt-6 max-w-2xl">
+        <CardContent className="grid gap-3 p-4 sm:grid-cols-2">
+          <Button asChild variant="outline" className="justify-start">
+            <Link href="/admin/settings/homepage"><PanelsTopLeft className="size-4" /> হোমপেজ ও SEO</Link>
+          </Button>
+          <Button asChild variant="outline" className="justify-start">
+            <Link href="/admin/settings/menu"><LayoutTemplate className="size-4" /> হেডার ও ফুটার মেনু</Link>
+          </Button>
         </CardContent>
       </Card>
 

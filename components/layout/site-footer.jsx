@@ -1,48 +1,103 @@
 import Link from "next/link";
-import { GraduationCap } from "lucide-react";
+import { Facebook, Instagram, Youtube, Send, Mail, Phone, MapPin, GraduationCap } from "lucide-react";
 
-export function SiteFooter() {
+// Columns, about text and copyright are all editable in admin → হেডার ও ফুটার.
+const FALLBACK_COLUMNS = [
+  { id: "f1", title: "দ্রুত লিংক", links: [
+    { id: "a", label: "হোম", href: "/" },
+    { id: "b", label: "কোর্সসমূহ", href: "/courses" },
+    { id: "c", label: "মক টেস্ট", href: "/exams" },
+  ] },
+];
+
+export function SiteFooter({ brand, settings }) {
+  const s = settings ?? {};
+  const siteName = brand?.siteName || s.siteName || "BCS Insight";
+  const columns = (Array.isArray(s["footer.columns"]) && s["footer.columns"].length
+    ? s["footer.columns"]
+    : FALLBACK_COLUMNS
+  ).filter((c) => c?.title || c?.links?.length);
+  const copyright = (s["footer.copyright"] || "© {year} {siteName}. সর্বস্বত্ব সংরক্ষিত।")
+    .replace("{year}", new Date().getFullYear())
+    .replace("{siteName}", siteName);
+  const socials = [
+    [Facebook, s["social.facebook"], "Facebook"],
+    [Instagram, s["social.instagram"], "Instagram"],
+    [Youtube, s["social.youtube"], "YouTube"],
+    [Send, s["social.whatsapp"], "WhatsApp"],
+  ].filter(([, href]) => !!href);
+
   return (
-    <footer className="border-t bg-card">
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:grid-cols-2 md:grid-cols-4">
-        <div className="sm:col-span-2 md:col-span-1">
-          <Link href="/" className="flex items-center gap-2 font-bold">
-            <span className="flex size-8 items-center justify-center rounded-lg brand-gradient text-white">
-              <GraduationCap className="size-4" />
-            </span>
-            AUS Prep
+    <footer className="bg-navy text-navy-foreground">
+      <div className="mx-auto grid max-w-6xl gap-9 px-4 py-12 sm:grid-cols-2 lg:grid-cols-4">
+        {/* brand */}
+        <div>
+          <Link href="/" className="flex items-center gap-2">
+            {brand?.logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={brand.logoUrl} alt={brand?.siteName} className="size-8 rounded-md object-contain" />
+            ) : (
+              <span className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
+                <GraduationCap className="size-4" />
+              </span>
+            )}
+            <span className="text-lg font-bold">{siteName}</span>
           </Link>
-          <p className="mt-3 max-w-xs text-sm text-muted-foreground">
-            চাকরির পরীক্ষার সম্পূর্ণ প্রস্তুতি — MCQ, লাইভ পরীক্ষা, লিখিত মডিউল ও ভিডিও কোর্স।
-          </p>
+          {s["footer.about"] !== "" && (
+            <p className="mt-3 max-w-xs text-sm leading-relaxed text-white/65">
+              {s["footer.about"] ?? "সরকারি চাকরির প্রস্তুতিতে একটি পূর্ণাঙ্গ অনলাইন লার্নিং প্ল্যাটফর্ম।"}
+            </p>
+          )}
+          {socials.length > 0 && (
+            <div className="mt-4 flex gap-2">
+              {socials.map(([Icon, href, label], i) => (
+                <a
+                  key={i}
+                  href={href}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={label}
+                  className="flex size-9 items-center justify-center rounded-full bg-white/10 transition hover:bg-primary"
+                >
+                  <Icon className="size-4" />
+                </a>
+              ))}
+            </div>
+          )}
         </div>
-        <FooterCol
-          title="পরীক্ষা"
-          links={[
-            ["পরীক্ষা তালিকা", "/exams"],
-            ["MCQ প্র্যাকটিস", "/practice"],
-            ["লিখিত পরীক্ষা", "/written"],
-          ]}
-        />
-        <FooterCol
-          title="শেখা"
-          links={[
-            ["ভিডিও কোর্স", "/courses"],
-            ["ড্যাশবোর্ড", "/dashboard"],
-            ["ভুল খাতা", "/mistakes"],
-          ]}
-        />
-        <FooterCol
-          title="অ্যাকাউন্ট"
-          links={[
-            ["লগইন", "/login"],
-            ["রেজিস্টার", "/register"],
-            ["প্রোফাইল", "/profile"],
-          ]}
-        />
+
+        {columns.map((c, i) => <FooterCol key={c.id ?? i} title={c.title} links={c.links ?? []} />)}
+
+        {/* contact */}
+        <div>
+          <h4 className="mb-3 text-sm font-bold">{s["footer.contactTitle"] || "যোগাযোগ"}</h4>
+          <ul className="space-y-2.5 text-sm text-white/65">
+            {s["contact.email"] && (
+              <li className="flex items-start gap-2">
+                <Mail className="mt-0.5 size-4 shrink-0 text-primary" />
+                <span className="break-all">{s["contact.email"]}</span>
+              </li>
+            )}
+            {s["contact.phone"] && (
+              <li className="flex items-start gap-2">
+                <Phone className="mt-0.5 size-4 shrink-0 text-primary" />
+                <span>{s["contact.phone"]}</span>
+              </li>
+            )}
+            {s["contact.address"] && (
+              <li className="flex items-start gap-2">
+                <MapPin className="mt-0.5 size-4 shrink-0 text-primary" />
+                <span>{s["contact.address"]}</span>
+              </li>
+            )}
+          </ul>
+        </div>
       </div>
-      <div className="border-t py-5 text-center text-xs text-muted-foreground">
-        © {new Date().getFullYear()} AUS Prep. All rights reserved.
+
+      <div className="border-t border-white/10">
+        <div className="mx-auto max-w-6xl px-4 py-5 text-center text-xs text-white/55">
+          {copyright}
+        </div>
       </div>
     </footer>
   );
@@ -51,13 +106,11 @@ export function SiteFooter() {
 function FooterCol({ title, links }) {
   return (
     <div>
-      <h4 className="mb-3 text-sm font-semibold">{title}</h4>
-      <ul className="space-y-2 text-sm text-muted-foreground">
-        {links.map(([label, href]) => (
-          <li key={href}>
-            <Link href={href} className="hover:text-primary">
-              {label}
-            </Link>
+      <h4 className="mb-3 text-sm font-bold">{title}</h4>
+      <ul className="space-y-2.5 text-sm text-white/65">
+        {links.filter((l) => l?.label && l?.href).map((l, i) => (
+          <li key={l.id ?? i}>
+            <Link href={l.href} className="transition hover:text-primary">{l.label}</Link>
           </li>
         ))}
       </ul>
