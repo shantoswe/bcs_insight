@@ -60,9 +60,9 @@ async function ensureUser({ email, password, name, role }) {
 async function main() {
   console.log("→ Seeding auth users…");
   const adminId = await ensureUser({
-    email: "admin@bcsinsight.test",
-    password: "Password123!",
-    name: "AUS Admin",
+    email: "mdsaklinekabir8@gmail.com",
+    password: "S@kline66",
+    name: "MD Saklian",
     role: "ADMIN",
   });
   for (let i = 1; i <= 3; i++) {
